@@ -1,0 +1,56 @@
+We are not running as root, and we do not want to handle privilege
+escalation, so writing to /var/lib/systemd/coredump is out of
+question. We must send a single message to the journal.
+
+For coredumps, we send:
+specified in sys.core_pattern:
+    COREDUMP_PID=16216
+    COREDUMP_UID=1002
+    COREDUMP_GID=1002
+    COREDUMP_SIGNAL=6
+    COREDUMP_TIMESTAMP=1477530183000000
+    COREDUMP_RLIMIT=18446744073709551615
+
+gathered by the sys.core_pattern executable:
+    COREDUMP_COMM=
+    COREDUMP_EXE=
+    COREDUMP_UNIT=
+    COREDUMP_USER_UNIT=
+    COREDUMP_OWNER_UID=
+    COREDUMP_SLICE=
+    COREDUMP_CMDLINE=
+    COREDUMP_CGROUP=
+    COREDUMP_OPEN_FDS=
+    COREDUMP_PROC_STATUS=
+    COREDUMP_PROC_MAPS=
+    COREDUMP_PROC_LIMITS=
+    COREDUMP_PROC_MOUNTINFO=
+    COREDUMP_CWD=
+    COREDUMP_ROOT=
+    COREDUMP_ENVIRON=
+    COREDUMP_CONTAINER_CMDLINE=
+    MESSAGE_ID=fc2e22bc6ee647b6b90729ab34a250b1
+
+attached by the secondary handler:
+    COREDUMP_FILENAME=/var/lib/systemd/coredump/core.lt-test-path-ut.1002.6bece0304e694e37a39f2c061b403f8c.16216.1477530183000
+    MESSAGE=Process 16216 (lt-test-path-ut) of user 1002 dumped core.
+
+            Stack trace of thread 16216:
+            #0  0x00007f6ab00a092f __GI_raise (libc.so.6)
+            #1  0x00007f6ab00a252a __GI_abort (libc.so.6)
+            #2  0x00007f6ab06bdb92 log_assert_failed (libsystemd-shared-231.so)
+            #3  0x00005622f5e0af32 test_path_startswith (lt-test-path-util)
+            #4  0x00005622f5e0ce20 main (lt-test-path-util)
+            #5  0x00007f6ab008b401 __libc_start_main (libc.so.6)
+            #6  0x00005622f5e077ba _start (lt-test-path-util)
+
+For exceptions, we would gather:
+    COREDUMP_PID
+    COREDUMP_UID
+    COREDUMP_GID
+    COREDUMP_GID
+    COREDUMP_TIMESTAMP
+    COREDUMP_RLIMIT
+
+    COREDUMP_PYTHON_EXCEPTION
+    COREDUMP_PYTHON_BACKTRACE
