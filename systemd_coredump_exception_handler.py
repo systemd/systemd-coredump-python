@@ -23,11 +23,21 @@ Module to the log Python exceptions in the journal via systemd-coredump
 
 import sys
 
-def _log_exception(exception, text):
+def _write_journal_field(pipe, name, value):
+    import struct
+
+    name = name.encode('ascii')
+    value = value.encode('utf-8')
+
+    pipe.write(name + b'\n' +
+               struct.pack('<Q', len(value)) + value + b'\n')
+
+def _log_exception(etype, value, text):
     import subprocess
     import time
     import os
     import resource
+    import getpass
 
     pid = os.getpid()
     uid = os.getuid()
@@ -36,15 +46,33 @@ def _log_exception(exception, text):
     rlimit_core = resource.getrlimit(resource.RLIMIT_CORE)[0]
     rlimit = str(rlimit_core)
 
-    cmd = ['/home/zbyszek/src/systemd-master/systemd-coredump', '--traceback',
+    cmd = ['/usr/lib/systemd/systemd-coredump', '--backtrace',
            str(pid),
            str(uid),
            str(gid),
-           exception,
+           etype.__name__,
            timestamp,
            rlimit] + sys.argv
-    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, universal_newlines=True)
-    p.communicate(input=text)
+    p = subprocess.Popen(cmd, stdin=subprocess.PIPE, universal_newlines=False)
+
+    try:
+        user = getpass.getuser()
+    except Exception:
+        user = str(uid)
+
+    _write_journal_field(p.stdin, 'MESSAGE',
+                         "Process {} ({}) of user {} failed with {}: {}\n\n{}"
+                         .format(pid, ' '.join(sys.argv), user, etype.__name__, value, text))
+
+    _write_journal_field(p.stdin, 'COREDUMP_PYTHON_EXECUTABLE', sys.executable)
+    _write_journal_field(p.stdin, 'COREDUMP_PYTHON_VERSION', sys.version)
+    _write_journal_field(p.stdin, 'COREDUMP_PYTHON_THREAD_INFO', str(sys.thread_info))
+    _write_journal_field(p.stdin, 'COREDUMP_PYTHON_EXCEPTION_TYPE', etype.__name__)
+    _write_journal_field(p.stdin, 'COREDUMP_PYTHON_EXCEPTION_VALUE', str(value))
+
+    p.stdin.write(b'\n')
+    p.stdin.close()
+    p.wait()
 
 def _ignore_exception(etype, value):
     return (etype in (KeyboardInterrupt, SystemExit)
@@ -58,7 +86,6 @@ def _handle_exception(etype, value, tb):
     import os
     import errno
 
-    short = '{}: {}'.format(etype.__name__, value)
     long = traceback.format_exception(etype, value, tb)
     text = ''.join(long)
     if tb is not None and etype != IndentationError:
@@ -73,7 +100,7 @@ def _handle_exception(etype, value, tb):
             pass
 
     # Send data to the journal
-    _log_exception(short, text)
+    _log_exception(etype, value, text)
 
 def handle_exception(etype, value, tb):
     "Send the exception to systemd-journald via systemd-coredump."
@@ -85,7 +112,7 @@ def handle_exception(etype, value, tb):
     except Exception:
         # Silently ignore any error in this hook,
         # to not interfere with other scripts
-        pass
+        raise
 
     return sys.__excepthook__(etype, value, tb)
 
