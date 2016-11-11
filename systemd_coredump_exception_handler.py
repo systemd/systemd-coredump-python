@@ -102,7 +102,7 @@ def _handle_exception(etype, value, tb):
     # Send data to the journal
     _log_exception(etype, value, text)
 
-def handle_exception(etype, value, tb):
+def systemd_coredump_handle_exception(etype, value, tb):
     "Send the exception to systemd-journald via systemd-coredump."
     try:
         # Restore original exception handler
@@ -116,13 +116,31 @@ def handle_exception(etype, value, tb):
 
     return sys.__excepthook__(etype, value, tb)
 
-# install the exception handler when this module is imported
-try:
-    sys.excepthook = handle_exception
-except Exception as e:
-    pass
+def systemd_coredump_enabled():
+    "Returns True if kernel.core_pattern sysctl invokes systemd-coredump"
+    with open('/proc/sys/kernel/core_pattern', 'rt') as f:
+        text = f.read()
+        return text.startswith('|') and 'systemd-coredump' in text
+
+def install(automatic=False):
+    """Install the handler function as sys.excepthook.
+
+    Will do anything only if either automatic is false or
+    systemd_coredump_enabled() returns true.
+
+    Might raise an exception if checking or installation fails, but
+    only if automatic is false.
+    """
+    try:
+        if not automatic or systemd_coredump_enabled():
+            sys.excepthook = systemd_coredump_handle_exception
+    except Exception as e:
+        if not automatic:
+            raise
 
 if __name__ == '__main__':
+    install()
+
     # test exception raised to show the effect
     def f():
         a = 3

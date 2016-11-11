@@ -1,1 +1,1 @@
-import systemd_coredump_exception_handler
+import systemd_coredump_exception_handler; systemd_coredump_exception_handler.install(automatic=True)
