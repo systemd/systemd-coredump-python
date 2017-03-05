@@ -15,6 +15,7 @@ version = '1'
 setup (name = 'systemd-coredump-python',
        version = version,
        description = 'sys.excepthook helper to log Python exceptions in the journal via systemd-coredump',
+       long_description = open('README').read(),
        author = 'Zbigniew Jędrzejewski-Szmek',
        author_email = 'zbyszek@in.waw.pl',
        url = 'https://github.com/systemd/systemd-coredump-python',
