@@ -26,6 +26,8 @@ version should be supported.
 
 import sys
 
+_sys_excepthook = None
+
 def _write_journal_field(pipe, name, value):
     import struct
 
@@ -140,6 +142,11 @@ def install(nocheck=False):
     Failure is silent.
     """
     global _sys_excepthook
+    if _sys_excepthook is not None:
+        # never install ourselves twice. In particular our .pth file could be
+        # installed in multiple locations (e.g. in user and system-specific
+        # directories), and we'd fall into infinite recursion below.
+        return
     try:
         if nocheck or systemd_coredump_enabled():
             _sys_excepthook = sys.excepthook
