@@ -17,6 +17,7 @@ setup (name = 'systemd-coredump-python',
        description = 'sys.excepthook helper to log Python exceptions in the journal via systemd-coredump',
        author = 'Zbigniew Jędrzejewski-Szmek',
        author_email = 'zbyszek@in.waw.pl',
+       url = 'https://github.com/systemd/systemd-coredump-python',
        license = 'GPLv2+',
        classifiers = [
            'Programming Language :: Python :: 2',
