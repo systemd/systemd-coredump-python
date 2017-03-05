@@ -18,7 +18,7 @@
 # Foundation, Inc., 51 Franklin Street, Suite 500, Boston, MA  02110-1335  USA
 
 """
-Module to the log Python exceptions in the journal via systemd-coredump
+sys.excepthook helper to log exceptions in the journal via systemd-coredump
 """
 
 import sys
@@ -33,11 +33,11 @@ def _write_journal_field(pipe, name, value):
                struct.pack('<Q', len(value)) + value + b'\n')
 
 def _log_exception(etype, value, text):
-    import subprocess
-    import time
     import os
+    import time
     import resource
     import getpass
+    import subprocess
 
     pid = os.getpid()
     uid = os.getuid()
@@ -74,17 +74,19 @@ def _log_exception(etype, value, text):
     p.stdin.close()
     p.wait()
 
-def _ignore_exception(etype, value):
-    return (etype in (KeyboardInterrupt, SystemExit)
+def _ignore_exception(e):
+    import errno
+
+    return (isinstance(e, (KeyboardInterrupt, SystemExit))
             or
-            etype in (IOError, OSError) and value.errno == errno.EPIPE
+            isinstance(e, (IOError, OSError)) and e.errno == errno.EPIPE
             or
-            not sys.argv[0] or sys.argv[0][0] == '-')
+            not sys.argv[0]
+            or
+            sys.argv[0].startswith('-'))
 
 def _handle_exception(etype, value, tb):
     import traceback
-    import os
-    import errno
 
     long = traceback.format_exception(etype, value, tb)
     text = ''.join(long)
@@ -103,18 +105,19 @@ def _handle_exception(etype, value, tb):
     _log_exception(etype, value, text)
 
 def systemd_coredump_handle_exception(etype, value, tb):
-    "Send the exception to systemd-journald via systemd-coredump."
+    """Send the exception to systemd-journald via systemd-coredump.
+
+    After systemd-coredump is done, passes control back to call the
+    original hook.
+    """
     try:
-        # Restore original exception handler
-        sys.excepthook = sys.__excepthook__
-        if not _ignore_exception(etype, value):
+        if not _ignore_exception(value):
             _handle_exception(etype, value, tb)
     except Exception:
-        # Silently ignore any error in this hook,
-        # to not interfere with other scripts
-        raise
+        # Ignore any and all errors
+        pass
 
-    return sys.__excepthook__(etype, value, tb)
+    return _sys_excepthook(etype, value, tb)
 
 def systemd_coredump_enabled():
     "Returns True if kernel.core_pattern sysctl invokes systemd-coredump"
@@ -122,26 +125,24 @@ def systemd_coredump_enabled():
         text = f.read()
         return text.startswith('|') and 'systemd-coredump' in text
 
-def install(automatic=False):
+def install(nocheck=False):
     """Install the handler function as sys.excepthook.
 
-    Will do anything only if either automatic is false or
-    systemd_coredump_enabled() returns true.
-
-    Might raise an exception if checking or installation fails, but
-    only if automatic is false.
+    The original hook is stored as _sys_excepthook.
+    Failure is silent.
     """
+    global _sys_excepthook
     try:
-        if not automatic or systemd_coredump_enabled():
+        if nocheck or systemd_coredump_enabled():
+            _sys_excepthook = sys.excepthook
             sys.excepthook = systemd_coredump_handle_exception
-    except Exception as e:
-        if not automatic:
-            raise
+    except Exception:
+        pass
 
 if __name__ == '__main__':
-    install()
+    install(True)
 
-    # test exception raised to show the effect
+    # throw a nested test exception to show the effect
     def f():
         a = 3
         h = f
