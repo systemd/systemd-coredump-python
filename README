@@ -12,7 +12,12 @@ LICENSE:
 
 REQUIREMENTS:
     Python 2.x or 3.x.
-    CPython, PyPy, PyPy3 should all work.
+    Tested with CPython, PyPy, PyPy3.
+
+    (Does not work with Jython: 2.5 is too old, and 2.7 is broken,
+    see http://bugs.jython.org/issue2405.)
+
+    systemd v. 233 or later is required.
 
 USAGE:
 

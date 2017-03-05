@@ -19,6 +19,9 @@
 
 """
 sys.excepthook helper to log exceptions in the journal via systemd-coredump
+
+This module is compatible with Python 2.x and Python 3.x. Any semi-recent
+version should be supported.
 """
 
 import sys
@@ -66,7 +69,12 @@ def _log_exception(etype, value, text):
 
     _write_journal_field(p.stdin, 'COREDUMP_PYTHON_EXECUTABLE', sys.executable)
     _write_journal_field(p.stdin, 'COREDUMP_PYTHON_VERSION', sys.version)
-    _write_journal_field(p.stdin, 'COREDUMP_PYTHON_THREAD_INFO', str(sys.thread_info))
+    try:
+        ti = sys.thread_info
+    except AttributeError:
+        pass
+    else:
+        _write_journal_field(p.stdin, 'COREDUMP_PYTHON_THREAD_INFO', str(ti))
     _write_journal_field(p.stdin, 'COREDUMP_PYTHON_EXCEPTION_TYPE', etype.__name__)
     _write_journal_field(p.stdin, 'COREDUMP_PYTHON_EXCEPTION_VALUE', str(value))
 
