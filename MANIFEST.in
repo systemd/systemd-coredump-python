@@ -1,2 +1,3 @@
+include COPYING
 include systemd_coredump.pth
 graft tests
