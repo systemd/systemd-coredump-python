@@ -155,8 +155,6 @@ def install(nocheck=False):
         pass
 
 if __name__ == '__main__':
-    install(True)
-
     # throw a nested test exception to show the effect
     def f():
         a = 3
