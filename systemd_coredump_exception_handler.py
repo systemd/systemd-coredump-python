@@ -87,13 +87,30 @@ def _log_exception(etype, value, text):
 def _ignore_exception(e):
     import errno
 
-    return (isinstance(e, (KeyboardInterrupt, SystemExit))
-            or
-            isinstance(e, (IOError, OSError)) and e.errno == errno.EPIPE
-            or
-            not sys.argv[0]
-            or
-            sys.argv[0].startswith('-'))
+    # Ignore Ctrl-C
+    # SystemExit -> this exception is not an error
+    if isinstance(e, (KeyboardInterrupt, SystemExit)):
+        return True
+
+    # Ignore EPIPE: it happens all the time
+    # Testcase: script.py | true, where script.py is:
+    ## #!/usr/bin/python
+    ## import os
+    ## import time
+    ## time.sleep(1)
+    ## os.write(1, "Hello\n")  # print "Hello" wouldn't be the same
+    #
+    if isinstance(e, (IOError, OSError)) and e.errno == errno.EPIPE:
+        return True
+
+    # Ignore interactive Python and similar
+    # Check for first "-" is meant to catch "-c" which appears in this case:
+    ## $ python -c 'import sys; print "argv0 is:%s" % sys.argv[0]'
+    ## argv0 is:-c
+    if not sys.argv[0] or sys.argv[0].startswith('-'):
+        return True
+
+    return False
 
 def _handle_exception(etype, value, tb):
     import traceback
