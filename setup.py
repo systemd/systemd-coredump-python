@@ -10,7 +10,7 @@ if '--user' in sys.argv: # There must be a better way to do this,
 else:
     packages_path = sysconfig.get_path('purelib')
 
-version = '1'
+version = '3'
 
 setup (name = 'systemd-coredump-python',
        version = version,
