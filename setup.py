@@ -1,14 +1,14 @@
 # -*- coding:utf-8 -*-
+import site
 import sys
-from distutils.core import setup
+import sysconfig
+from setuptools import setup
 
 if '--user' in sys.argv: # There must be a better way to do this,
                          # if you know it, please tell me.
-    import site
     packages_path = site.getusersitepackages()
 else:
-    from distutils import sysconfig
-    packages_path = sysconfig.get_python_lib()
+    packages_path = sysconfig.get_path('purelib')
 
 version = '1'
 
